@@ -1,0 +1,88 @@
+import pandas as pd
+df = pd.read_csv('/content/DataCoSupplyChainDataset[1].csv', encoding_errors='ignore')
+df.shapedef rename_col(s):
+    s = s.replace(' ', '_')
+    s = s.replace('-', '_')
+    s = s.replace('(', '')
+    s = s.replace(')', '')
+    a = s.split('_')
+    for i in range(len(a)):
+        if not all([c == c.upper() for c in a[i]]):
+            a[i] = a[i].capitalize()
+    return '_'.join(a)
+
+df.columns = [rename_col(c) for c in df.columns]
+df.columns
+df.head()
+df.Order_Date_Dateorders = pd.to_datetime(df.Order_Date_Dateorders)
+
+for year in range(2015, 2018):
+    group = df[df.Order_Date_Dateorders.dt.year == year].groupby(df.Order_Date_Dateorders.dt.to_period('M')).Sales_Per_Customer.sum()
+    group.index = group.index.month
+    group.plot(kind='line')
+df['Shipping_Duration_Difference'] = df.Days_For_Shipping_Real - df.Days_For_Shipment_Scheduled
+df.plot.box(by='Delivery_Status', column='Shipping_Duration_Difference', title='Shipping_Duration_Difference') 
+category_performance = df.groupby('Category_Name').agg(
+    Total_Sales=('Sales_Per_Customer', 'sum'),
+    Average_Benefit_Per_Order=('Benefit_Per_Order', 'mean')
+)
+
+category_performance = category_performance.sort_values(by='Total_Sales', ascending=False)
+ax1 = category_performance.Total_Sales.head(10).plot(kind='bar', width=0.8, color='blue', alpha=0.3)
+ax2 = ax1.twinx()
+category_performance.Average_Benefit_Per_Order.head(10).plot(kind='bar', color='green', width=0.5, alpha=0.3, ax=ax2)
+
+ax1.legend(loc='upper left')
+ax2.legend(loc='upper right')
+category_performance = df.groupby('Category_Name').agg(
+    Total_Sales=('Sales_Per_Customer', 'sum'),
+    Average_Benefit_Per_Order=('Benefit_Per_Order', 'mean')
+)
+
+category_performance = category_performance.sort_values(by='Total_Sales', ascending=False)
+
+ax1 = category_performance.Total_Sales.head(10).plot(kind='barh', width=0.8, color='blue', alpha=0.3)
+ax2 = ax1.twiny()
+category_performance.Average_Benefit_Per_Order.head(10).plot(kind='barh', color='green', width=0.5, alpha=0.3, ax=ax2)
+
+ax1.invert_yaxis()
+#ax3.invert_yaxis()
+
+ax1.legend(loc='upper right')
+ax2.legend(loc='right')
+category_performance = df.groupby('Category_Name').agg(
+    Total_Sales=('Sales_Per_Customer', 'sum'),
+    Average_Benefit_Per_Order=('Benefit_Per_Order', 'mean')
+)
+
+category_performance = category_performance.sort_values(by='Total_Sales', ascending=False)
+
+ax1 = category_performance.Average_Benefit_Per_Order.head(10).plot(kind='barh', color='green', width=0.5, alpha=0.3)
+ax2 = ax1.twiny()
+category_performance.Total_Sales.head(10).plot(kind='barh', width=0.8, color='blue', alpha=0.3, ax=ax2)
+
+ax1.invert_yaxis()
+
+ax1.legend(loc='right')
+ax2.legend(loc='upper right')
+ax = df.groupby('Customer_City').Sales_Per_Customer.sum().sort_values(ascending=False).head(10).sort_values().plot(kind='barh', color='lightgray')
+bars = ax.patches
+bars[-1].set_facecolor('#004c99')
+ax = df.groupby('Customer_Country').Sales_Per_Customer.sum().head(10).plot(kind='barh', color='lightgray')
+bars = ax.patches
+bars[-1].set_facecolor('#004c99')
+group = df.groupby(['Type', 'Delivery_Status']).Type.count().unstack()
+group.plot(kind='bar')
+group['Total'] = group.sum(axis=1)
+for c in group.columns[:-1]:
+    group[c] = group[c] / group.Total
+group[group.columns[:-1]].plot(kind='bar', stacked=True)
+df.groupby('Category_Name').Benefit_Per_Order.mean().sort_values(ascending=False).head().sort_values().plot(kind='barh')
+group = df.groupby(['Category_Name','Delivery_Status']).Category_Name.count().unstack()
+group['Total'] = group.sum(axis=1)
+group['Canceled_Rate'] = group['Shipping canceled'] / group.Total
+ax = group.Canceled_Rate.sort_values(ascending=False).head().plot(kind='barh', title='Canceled_Rate')
+ax.invert_yaxis()
+df.groupby('Shipping_Mode').Days_For_Shipping_Real.mean().sort_values(ascending=False).plot(kind='barh', xlabel='Days_For_Shipping_Real')
+df.groupby(df.Order_Date_Dateorders.dt.month).Sales_Per_Customer.mean().plot(kind='bar', xlabel='Month', ylabel='Sales_Per_Customer')
+df.groupby(df.Order_Date_Dateorders.dt.isocalendar().week).Sales_Per_Customer.mean().sort_values(ascending=False).head().plot(kind='bar', xlabel='Week', ylabel='Sales_Per_Customer')
